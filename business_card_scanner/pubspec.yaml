@@ -48,9 +48,17 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   melos: ^6.1.0
+  flutter_launcher_icons: ^0.14.1
 
 flutter:
   uses-material-design: true
   generate: true
   assets:
     - assets/
+
+# Flutter Launcher Icons configuration
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/bcardv1.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
