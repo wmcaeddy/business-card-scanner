@@ -45,5 +45,17 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- Camera and Photo Library Permissions -->
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs camera access to scan business cards</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs photo library access to select business card images</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app needs photo library access to save scanned business cards</string>
+	
+	<!-- Contacts Permission -->
+	<key>NSContactsUsageDescription</key>
+	<string>This app needs contacts access to save business card information to your contacts</string>
 </dict>
 </plist>

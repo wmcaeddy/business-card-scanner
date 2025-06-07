@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:settings/settings.dart';
-
+import '../pages/business_card_list_page.dart';
+import '../pages/camera_page.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({
@@ -16,6 +17,24 @@ class AppDrawer extends StatelessWidget {
         useSafeArea: true,
         builder: (BuildContext context) => const SettingsSheet(),
       );
+
+  void _navigateToBusinessCards(BuildContext context) {
+    Navigator.of(context).pop(); // Close drawer
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const BusinessCardListPage(),
+      ),
+    );
+  }
+
+  void _navigateToCamera(BuildContext context) {
+    Navigator.of(context).pop(); // Close drawer
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const CameraPage(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +54,21 @@ class AppDrawer extends StatelessWidget {
               AppLocalizations.of(context)!.appName,
               style: Theme.of(context).textTheme.titleLarge,
             ),
+            const SizedBox(height: 32),
+
+            // Navigation items
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Scan New Card'),
+              onTap: () => _navigateToCamera(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.credit_card),
+              title: const Text('My Business Cards'),
+              onTap: () => _navigateToBusinessCards(context),
+            ),
+            const Divider(),
+
             const Spacer(),
             BcsButton(
               onPressed: () => _openBottomSheet(context),

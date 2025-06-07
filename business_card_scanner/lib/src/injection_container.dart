@@ -1,12 +1,31 @@
 import 'package:core/secure_storage.dart';
 import 'package:get_it/get_it.dart';
 import 'package:settings/settings.dart';
+import 'services/ocr_service.dart';
+import 'services/database_service.dart';
+import 'services/contact_service.dart';
 
 final getIt = GetIt.instance;
 
 void setup() {
   _setupExternalServices();
+  _setupServices();
   _setupSettings();
+}
+
+void _setupServices() {
+  // Register and initialize OCR service
+  getIt.registerLazySingleton(() {
+    final ocrService = OCRService();
+    ocrService.initialize();
+    return ocrService;
+  });
+
+  // Register database service
+  getIt.registerLazySingleton(() => DatabaseService());
+
+  // Register contact service
+  getIt.registerLazySingleton(() => ContactService());
 }
 
 void _setupSettings() {
