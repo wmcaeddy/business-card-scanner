@@ -2,7 +2,6 @@ import 'package:core/bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:settings/settings.dart';
 
-import '../l10n/app_l10n.dart';
 import 'injection_container.dart';
 import 'presentation/pages/splash_screen.dart';
 
@@ -35,8 +34,6 @@ class AppView extends StatelessWidget {
     return BlocBuilder<LocaleCubit, LocaleState>(builder: (context, state) {
       return MaterialApp(
         title: 'Business Card Scanner',
-        localizationsDelegates: AppL10n.localizationsDelegates,
-        supportedLocales: AppL10n.supportedLocales,
         locale: state.locale,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF3F37C9)),

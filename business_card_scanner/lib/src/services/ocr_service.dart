@@ -7,11 +7,14 @@ class OCRService {
   factory OCRService() => _instance;
   OCRService._internal();
 
-  late final TextRecognizer _textRecognizer;
+  late final TextRecognizer _latinTextRecognizer;
+  late final TextRecognizer _chineseTextRecognizer;
 
-  // Initialize the text recognizer
+  // Initialize the text recognizers
   void initialize() {
-    _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+    _latinTextRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+    _chineseTextRecognizer =
+        TextRecognizer(script: TextRecognitionScript.chinese);
   }
 
   Future<BusinessCard> processBusinessCard(String imagePath) async {
@@ -24,12 +27,15 @@ class OCRService {
       // Create input image from file path
       final inputImage = InputImage.fromFilePath(imagePath);
 
-      // Process the image with ML Kit
-      final RecognizedText recognizedText =
-          await _textRecognizer.processImage(inputImage);
+      // Process the image with both Latin and Chinese recognizers
+      final latinText = await _latinTextRecognizer.processImage(inputImage);
+      final chineseText = await _chineseTextRecognizer.processImage(inputImage);
+
+      // Combine text from both recognizers
+      final combinedText = '${latinText.text}\n${chineseText.text}'.trim();
 
       // Parse the extracted text into business card data
-      final extractedData = _parseBusinessCardText(recognizedText.text);
+      final extractedData = _parseBusinessCardText(combinedText);
 
       // Create business card with extracted data
       final now = DateTime.now();
@@ -378,7 +384,8 @@ class OCRService {
 
   void dispose() {
     try {
-      _textRecognizer.close();
+      _latinTextRecognizer.close();
+      _chineseTextRecognizer.close();
     } catch (e) {
       // Handle disposal error silently
     }

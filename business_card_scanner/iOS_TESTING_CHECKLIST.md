@@ -21,6 +21,8 @@ flutter clean
 flutter pub get
 ```
 
+**Note**: The Podfile includes `GoogleMLKit/TextRecognitionChinese` for Chinese text recognition support. This will increase the app size but enables recognition of Chinese characters on business cards.
+
 ## 📱 **Core Functionality Testing**
 
 ### 3. **Camera & Image Capture**
@@ -34,17 +36,20 @@ flutter pub get
 
 ### 4. **OCR Text Recognition**
 - [ ] **Google ML Kit** initializes correctly on iOS
-- [ ] **Text extraction** works from business card images
+- [ ] **Latin text recognition** works from business card images
+- [ ] **Chinese text recognition** works from business card images
+- [ ] **Mixed language** business cards (Latin + Chinese) work correctly
 - [ ] **Processing indicators** show during OCR
 - [ ] **Text parsing** correctly identifies:
-  - [ ] Names
-  - [ ] Company names
-  - [ ] Job titles
-  - [ ] Phone numbers (various formats)
+  - [ ] Names (English and Chinese)
+  - [ ] Company names (English and Chinese)
+  - [ ] Job titles (English and Chinese)
+  - [ ] Phone numbers (various formats including international)
   - [ ] Email addresses
   - [ ] Websites
-  - [ ] Addresses
+  - [ ] Addresses (English and Chinese)
 - [ ] **Error handling** for failed OCR processing
+- [ ] **Performance** with dual recognizers is acceptable
 
 ### 5. **Data Persistence (SQLite)**
 - [ ] **Database creation** works on iOS

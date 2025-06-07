@@ -130,7 +130,8 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
 
     try {
       final updatedCard = BusinessCard(
-        id: _businessCard?.id ?? '',
+        id: _businessCard?.id ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim().isEmpty
             ? null
             : _nameController.text.trim(),
