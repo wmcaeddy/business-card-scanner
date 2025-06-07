@@ -17,6 +17,45 @@ class OCRService {
         TextRecognizer(script: TextRecognitionScript.chinese);
   }
 
+  /// Extract raw text lines from business card image for manual mapping
+  Future<List<String>> extractTextLines(String imagePath) async {
+    try {
+      // Ensure the text recognizer is initialized
+      if (!_isInitialized()) {
+        initialize();
+      }
+
+      // Create input image from file path
+      final inputImage = InputImage.fromFilePath(imagePath);
+
+      // Process the image with both Latin and Chinese recognizers
+      final latinText = await _latinTextRecognizer.processImage(inputImage);
+      final chineseText = await _chineseTextRecognizer.processImage(inputImage);
+
+      // Combine and split text into lines
+      final combinedText = '${latinText.text}\n${chineseText.text}'.trim();
+      
+      if (combinedText.isEmpty) {
+        return [];
+      }
+
+      // Split into lines and clean up
+      final lines = combinedText
+          .split('\n')
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty)
+          .toSet() // Remove duplicates
+          .toList();
+
+      // Sort lines by length (longer lines first, as they're often more informative)
+      lines.sort((a, b) => b.length.compareTo(a.length));
+
+      return lines;
+    } catch (e) {
+      return [];
+    }
+  }
+
   Future<BusinessCard> processBusinessCard(String imagePath) async {
     try {
       // Ensure the text recognizer is initialized
@@ -62,6 +101,33 @@ class OCRService {
         createdAt: now,
         updatedAt: now,
       );
+    }
+  }
+
+  /// Process business card with manual mapping option
+  Future<Map<String, dynamic>> processBusinessCardWithMapping(String imagePath) async {
+    try {
+      // Extract raw text lines
+      final textLines = await extractTextLines(imagePath);
+      
+      // Also get the auto-parsed business card
+      final businessCard = await processBusinessCard(imagePath);
+
+      return {
+        'textLines': textLines,
+        'businessCard': businessCard,
+      };
+    } catch (e) {
+      final now = DateTime.now();
+      return {
+        'textLines': <String>[],
+        'businessCard': BusinessCard(
+          id: const Uuid().v4(),
+          imagePath: imagePath,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      };
     }
   }
 

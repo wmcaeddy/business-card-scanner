@@ -6,6 +6,7 @@ import '../../services/ocr_service.dart';
 import '../../services/database_service.dart';
 import '../../services/contact_service.dart';
 import '../../services/export_service.dart';
+import 'text_mapping_page.dart';
 
 class BusinessCardDetailPage extends StatefulWidget {
   final String imagePath;
@@ -98,19 +99,24 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
 
       _populateFields();
 
-      // Show success message
+      // Show success message with mapping option
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
+          SnackBar(
+            content: const Row(
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 8),
-                Text('Business card processed successfully!'),
+                Expanded(child: Text('Business card processed! Tap to adjust field mapping.')),
               ],
             ),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Map Fields',
+              textColor: Colors.white,
+              onPressed: _showTextMapping,
+            ),
           ),
         );
       }
@@ -120,6 +126,52 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
         _processingStatus = '';
       });
       _showErrorDialog('Failed to process business card: $e');
+    }
+  }
+
+  Future<void> _showTextMapping() async {
+    try {
+      final ocrService = GetIt.instance<OCRService>();
+      final textLines = await ocrService.extractTextLines(widget.imagePath);
+      
+      if (textLines.isEmpty) {
+        _showErrorDialog('No text found in the image for mapping.');
+        return;
+      }
+
+      final result = await Navigator.of(context).push<BusinessCard>(
+        MaterialPageRoute(
+          builder: (context) => TextMappingPage(
+            extractedTexts: textLines,
+            initialCard: _businessCard,
+          ),
+        ),
+      );
+
+      if (result != null) {
+        setState(() {
+          _businessCard = result;
+        });
+        _populateFields();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('Field mapping updated successfully!'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      _showErrorDialog('Failed to load text mapping: $e');
     }
   }
 
@@ -202,6 +254,18 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
 
     try {
       final contactService = GetIt.instance<ContactService>();
+      
+      // First test contacts access
+      final canAccess = await contactService.testContactsAccess();
+      if (!canAccess) {
+        setState(() {
+          _isAddingToContacts = false;
+        });
+        _showContactsPermissionDialog();
+        return;
+      }
+
+      // Add to contacts
       await contactService.addToContacts(_businessCard!);
 
       setState(() {
@@ -219,7 +283,7 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
               ],
             ),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
+            duration: Duration(seconds: 3),
           ),
         );
       }
@@ -227,8 +291,41 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
       setState(() {
         _isAddingToContacts = false;
       });
-      _showErrorDialog('Failed to add to contacts: $e');
+      
+      // Show more specific error handling
+      if (e.toString().contains('permission')) {
+        _showContactsPermissionDialog();
+      } else {
+        _showErrorDialog('Failed to add to contacts: $e');
+      }
     }
+  }
+
+  void _showContactsPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Contacts Permission Required'),
+        content: const Text(
+          'This app needs permission to access your contacts to save business card information. '
+          'Please grant contacts permission in Settings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              final contactService = GetIt.instance<ContactService>();
+              await contactService.requestContactsPermission();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _exportAsVCard() async {
@@ -314,6 +411,11 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
         title: const Text('Business Card Details'),
         actions: [
           if (_businessCard != null) ...[
+            IconButton(
+              onPressed: _showTextMapping,
+              icon: const Icon(Icons.tune),
+              tooltip: 'Map Text Fields',
+            ),
             IconButton(
               onPressed: _isExporting ? null : _exportAsVCard,
               icon: _isExporting
