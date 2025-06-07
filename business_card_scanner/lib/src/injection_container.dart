@@ -4,6 +4,7 @@ import 'package:settings/settings.dart';
 import 'services/ocr_service.dart';
 import 'services/database_service.dart';
 import 'services/contact_service.dart';
+import 'services/export_service.dart';
 
 final getIt = GetIt.instance;
 
@@ -26,6 +27,9 @@ void _setupServices() {
 
   // Register contact service
   getIt.registerLazySingleton(() => ContactService());
+
+  // Register export service
+  getIt.registerLazySingleton(() => ExportService());
 }
 
 void _setupSettings() {

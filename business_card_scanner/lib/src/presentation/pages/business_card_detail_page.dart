@@ -5,6 +5,7 @@ import '../../models/business_card.dart';
 import '../../services/ocr_service.dart';
 import '../../services/database_service.dart';
 import '../../services/contact_service.dart';
+import '../../services/export_service.dart';
 
 class BusinessCardDetailPage extends StatefulWidget {
   final String imagePath;
@@ -31,70 +32,105 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
   final _addressController = TextEditingController();
   final _notesController = TextEditingController();
 
+  BusinessCard? _businessCard;
+
   bool _isProcessing = false;
   bool _isSaving = false;
-  BusinessCard? _businessCard;
+  bool _isAddingToContacts = false;
+  bool _isExporting = false;
+  String _processingStatus = '';
 
   @override
   void initState() {
     super.initState();
     if (widget.existingCard != null) {
-      _populateFields(widget.existingCard!);
+      _businessCard = widget.existingCard;
+      _populateFields();
     } else {
       _processImage();
     }
   }
 
-  void _populateFields(BusinessCard card) {
-    _nameController.text = card.name ?? '';
-    _companyController.text = card.company ?? '';
-    _jobTitleController.text = card.jobTitle ?? '';
-    _phoneController.text = card.phone ?? '';
-    _emailController.text = card.email ?? '';
-    _websiteController.text = card.website ?? '';
-    _addressController.text = card.address ?? '';
-    _notesController.text = card.notes ?? '';
-    _businessCard = card;
+  void _populateFields() {
+    if (_businessCard != null) {
+      _nameController.text = _businessCard!.name ?? '';
+      _companyController.text = _businessCard!.company ?? '';
+      _jobTitleController.text = _businessCard!.jobTitle ?? '';
+      _phoneController.text = _businessCard!.phone ?? '';
+      _emailController.text = _businessCard!.email ?? '';
+      _websiteController.text = _businessCard!.website ?? '';
+      _addressController.text = _businessCard!.address ?? '';
+      _notesController.text = _businessCard!.notes ?? '';
+    }
   }
 
   Future<void> _processImage() async {
     setState(() {
       _isProcessing = true;
+      _processingStatus = 'Analyzing image...';
     });
 
     try {
+      await Future.delayed(
+          const Duration(milliseconds: 500)); // Small delay for UX
+
+      setState(() {
+        _processingStatus = 'Extracting text...';
+      });
+
       final ocrService = GetIt.instance<OCRService>();
       final extractedCard = await ocrService.processBusinessCard(
         widget.imagePath,
       );
 
       setState(() {
-        _businessCard = extractedCard;
-        _populateFields(extractedCard);
-        _isProcessing = false;
+        _processingStatus = 'Processing information...';
       });
+
+      await Future.delayed(
+          const Duration(milliseconds: 300)); // Small delay for UX
+
+      setState(() {
+        _businessCard = extractedCard;
+        _isProcessing = false;
+        _processingStatus = '';
+      });
+
+      _populateFields();
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Business card processed successfully!'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     } catch (e) {
       setState(() {
         _isProcessing = false;
+        _processingStatus = '';
       });
       _showErrorDialog('Failed to process business card: $e');
     }
   }
 
   Future<void> _saveBusinessCard() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
     setState(() {
       _isSaving = true;
     });
 
     try {
-      final now = DateTime.now();
       final updatedCard = BusinessCard(
-        id: _businessCard?.id ??
-            DateTime.now().millisecondsSinceEpoch.toString(),
+        id: _businessCard?.id ?? '',
         name: _nameController.text.trim().isEmpty
             ? null
             : _nameController.text.trim(),
@@ -120,48 +156,124 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
             ? null
             : _notesController.text.trim(),
         imagePath: widget.imagePath,
-        createdAt: _businessCard?.createdAt ?? now,
-        updatedAt: now,
+        createdAt: _businessCard?.createdAt ?? DateTime.now(),
+        updatedAt: DateTime.now(),
       );
 
       final databaseService = GetIt.instance<DatabaseService>();
       await databaseService.insertBusinessCard(updatedCard);
 
+      setState(() {
+        _businessCard = updatedCard;
+        _isSaving = false;
+      });
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Business card saved successfully!'),
+            content: Row(
+              children: [
+                Icon(Icons.save, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Business card saved successfully!'),
+              ],
+            ),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
           ),
         );
         Navigator.of(context).pop(true);
       }
     } catch (e) {
-      _showErrorDialog('Failed to save business card: $e');
-    } finally {
       setState(() {
         _isSaving = false;
       });
+      _showErrorDialog('Failed to save business card: $e');
     }
   }
 
   Future<void> _addToContacts() async {
     if (_businessCard == null) return;
 
+    setState(() {
+      _isAddingToContacts = true;
+    });
+
     try {
       final contactService = GetIt.instance<ContactService>();
       await contactService.addToContacts(_businessCard!);
 
+      setState(() {
+        _isAddingToContacts = false;
+      });
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Added to contacts successfully!'),
+            content: Row(
+              children: [
+                Icon(Icons.person_add, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Added to contacts successfully!'),
+              ],
+            ),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
+      setState(() {
+        _isAddingToContacts = false;
+      });
       _showErrorDialog('Failed to add to contacts: $e');
+    }
+  }
+
+  Future<void> _exportAsVCard() async {
+    if (_businessCard == null) return;
+
+    setState(() {
+      _isExporting = true;
+    });
+
+    try {
+      final exportService = GetIt.instance<ExportService>();
+      final filePath = await exportService.exportSingleVCard(_businessCard!);
+
+      setState(() {
+        _isExporting = false;
+      });
+
+      if (filePath != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.download, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Exported to: ${filePath.split('/').last}'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'View',
+              textColor: Colors.white,
+              onPressed: () {
+                // Could implement file viewer here
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isExporting = false;
+      });
+      _showErrorDialog('Failed to export vCard: $e');
     }
   }
 
@@ -200,22 +312,55 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
       appBar: AppBar(
         title: const Text('Business Card Details'),
         actions: [
-          if (_businessCard != null)
+          if (_businessCard != null) ...[
             IconButton(
-              onPressed: _addToContacts,
-              icon: const Icon(Icons.person_add),
+              onPressed: _isExporting ? null : _exportAsVCard,
+              icon: _isExporting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.download),
+              tooltip: 'Export vCard',
+            ),
+            IconButton(
+              onPressed: _isAddingToContacts ? null : _addToContacts,
+              icon: _isAddingToContacts
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.person_add),
               tooltip: 'Add to Contacts',
             ),
+          ],
         ],
       ),
       body: _isProcessing
-          ? const Center(
+          ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Processing business card...'),
+                  const CircularProgressIndicator(strokeWidth: 3),
+                  const SizedBox(height: 24),
+                  Text(
+                    _processingStatus,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Please wait while we analyze your business card',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ],
               ),
             )

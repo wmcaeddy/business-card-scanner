@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'business_card_detail_page.dart';
 
 class CameraPage extends StatefulWidget {
@@ -25,7 +26,7 @@ class _CameraPageState extends State<CameraPage> {
       );
 
       if (image != null) {
-        _navigateToDetail(image.path);
+        await _cropAndNavigate(image.path);
       }
     } catch (e) {
       _showErrorDialog('Failed to capture image: $e');
@@ -48,7 +49,7 @@ class _CameraPageState extends State<CameraPage> {
       );
 
       if (image != null) {
-        _navigateToDetail(image.path);
+        await _cropAndNavigate(image.path);
       }
     } catch (e) {
       _showErrorDialog('Failed to pick image: $e');
@@ -56,6 +57,38 @@ class _CameraPageState extends State<CameraPage> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _cropAndNavigate(String imagePath) async {
+    try {
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: imagePath,
+        compressFormat: ImageCompressFormat.jpg,
+        compressQuality: 90,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Business Card',
+            toolbarColor: Theme.of(context).primaryColor,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.ratio3x2,
+            lockAspectRatio: false,
+          ),
+          IOSUiSettings(
+            title: 'Crop Business Card',
+            doneButtonTitle: 'Done',
+            cancelButtonTitle: 'Cancel',
+          ),
+        ],
+      );
+
+      if (croppedFile != null) {
+        _navigateToDetail(croppedFile.path);
+      }
+    } catch (e) {
+      _showErrorDialog('Failed to crop image: $e');
+      // If cropping fails, use original image
+      _navigateToDetail(imagePath);
     }
   }
 
@@ -111,7 +144,7 @@ class _CameraPageState extends State<CameraPage> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Take a photo of a business card or select one from your gallery',
+              'Take a photo of a business card or select one from your gallery.\nYou can crop the image to focus on the card.',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey,

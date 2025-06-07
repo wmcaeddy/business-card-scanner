@@ -1,6 +1,5 @@
 import 'package:core/widgets.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:settings/settings.dart';
 import '../pages/business_card_list_page.dart';
@@ -51,7 +50,7 @@ class AppDrawer extends StatelessWidget {
               ),
             ),
             Text(
-              AppLocalizations.of(context)!.appName,
+              'Business Card Scanner',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 32),
@@ -72,11 +71,11 @@ class AppDrawer extends StatelessWidget {
             const Spacer(),
             BcsButton(
               onPressed: () => _openBottomSheet(context),
-              text: AppLocalizations.of(context)!.settings,
+              text: 'Settings',
             ),
             BcsButton(
               onPressed: () {},
-              text: AppLocalizations.of(context)!.logOut,
+              text: 'Log Out',
             ),
           ],
         ),

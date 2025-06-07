@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import '../../models/business_card.dart';
 import '../../services/database_service.dart';
+import '../../services/export_service.dart';
 import 'business_card_detail_page.dart';
 
 class BusinessCardListPage extends StatefulWidget {
@@ -14,6 +16,7 @@ class _BusinessCardListPageState extends State<BusinessCardListPage> {
   List<BusinessCard> _businessCards = [];
   List<BusinessCard> _filteredCards = [];
   bool _isLoading = true;
+  bool _isExporting = false;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -25,7 +28,7 @@ class _BusinessCardListPageState extends State<BusinessCardListPage> {
 
   Future<void> _loadBusinessCards() async {
     try {
-      final databaseService = DatabaseService();
+      final databaseService = GetIt.instance<DatabaseService>();
       final cards = await databaseService.getAllBusinessCards();
       setState(() {
         _businessCards = cards;
@@ -85,7 +88,7 @@ class _BusinessCardListPageState extends State<BusinessCardListPage> {
 
     if (confirmed == true) {
       try {
-        final databaseService = DatabaseService();
+        final databaseService = GetIt.instance<DatabaseService>();
         await databaseService.deleteBusinessCard(card.id);
         _loadBusinessCards();
         if (mounted) {
@@ -99,6 +102,106 @@ class _BusinessCardListPageState extends State<BusinessCardListPage> {
       } catch (e) {
         _showErrorDialog('Failed to delete business card: $e');
       }
+    }
+  }
+
+  Future<void> _showExportOptions() async {
+    if (_businessCards.isEmpty) {
+      _showErrorDialog('No business cards to export');
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Export Business Cards',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.table_chart),
+              title: const Text('Export as CSV'),
+              subtitle: const Text('Spreadsheet format'),
+              onTap: () {
+                Navigator.pop(context);
+                _exportAsCSV();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.contact_page),
+              title: const Text('Export as vCard'),
+              subtitle: const Text('Contact format'),
+              onTap: () {
+                Navigator.pop(context);
+                _exportAsVCard();
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportAsCSV() async {
+    setState(() {
+      _isExporting = true;
+    });
+
+    try {
+      final exportService = GetIt.instance<ExportService>();
+      final filePath = await exportService.exportToCSV(_businessCards);
+
+      if (filePath != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Exported to: $filePath'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      _showErrorDialog('Failed to export CSV: $e');
+    } finally {
+      setState(() {
+        _isExporting = false;
+      });
+    }
+  }
+
+  Future<void> _exportAsVCard() async {
+    setState(() {
+      _isExporting = true;
+    });
+
+    try {
+      final exportService = GetIt.instance<ExportService>();
+      final filePath = await exportService.exportToVCard(_businessCards);
+
+      if (filePath != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Exported to: $filePath'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      _showErrorDialog('Failed to export vCard: $e');
+    } finally {
+      setState(() {
+        _isExporting = false;
+      });
     }
   }
 
@@ -129,6 +232,20 @@ class _BusinessCardListPageState extends State<BusinessCardListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Business Cards'),
+        actions: [
+          if (_businessCards.isNotEmpty)
+            IconButton(
+              onPressed: _isExporting ? null : _showExportOptions,
+              icon: _isExporting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.download),
+              tooltip: 'Export',
+            ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(
@@ -212,46 +329,38 @@ class _BusinessCardListPageState extends State<BusinessCardListPage> {
                                   color: Colors.grey[600],
                                 ),
                               ),
-                            if (card.email != null)
-                              Text(
-                                card.email!,
-                                style: TextStyle(
-                                  color: Colors.blue[600],
-                                ),
-                              ),
                           ],
                         ),
-                        trailing: PopupMenuButton(
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'edit':
+                                _navigateToDetail(card);
+                                break;
+                              case 'delete':
+                                _deleteCard(card);
+                                break;
+                            }
+                          },
                           itemBuilder: (context) => [
                             const PopupMenuItem(
                               value: 'edit',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.edit),
-                                  SizedBox(width: 8),
-                                  Text('Edit'),
-                                ],
+                              child: ListTile(
+                                leading: Icon(Icons.edit),
+                                title: Text('Edit'),
+                                contentPadding: EdgeInsets.zero,
                               ),
                             ),
                             const PopupMenuItem(
                               value: 'delete',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.delete, color: Colors.red),
-                                  SizedBox(width: 8),
-                                  Text('Delete',
-                                      style: TextStyle(color: Colors.red)),
-                                ],
+                              child: ListTile(
+                                leading: Icon(Icons.delete, color: Colors.red),
+                                title: Text('Delete',
+                                    style: TextStyle(color: Colors.red)),
+                                contentPadding: EdgeInsets.zero,
                               ),
                             ),
                           ],
-                          onSelected: (value) {
-                            if (value == 'edit') {
-                              _navigateToDetail(card);
-                            } else if (value == 'delete') {
-                              _deleteCard(card);
-                            }
-                          },
                         ),
                         onTap: () => _navigateToDetail(card),
                       ),

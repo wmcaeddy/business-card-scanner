@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import '../../models/business_card.dart';
 import '../../services/database_service.dart';
+import 'settings_page.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/bcs_container.dart';
 import 'camera_page.dart';
@@ -98,6 +99,19 @@ class _HomePageState extends State<HomePage> {
         ),
         backgroundColor: Colors.white,
         title: const Text('Business Card Scanner'),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const SettingsPage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings',
+          ),
+        ],
       ),
       endDrawer: const AppDrawer(),
       body: _isLoading
@@ -145,81 +159,102 @@ class _HomePageState extends State<HomePage> {
                 // Business cards list
                 Expanded(
                   child: _businessCards.isEmpty
-                      ? const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.credit_card,
-                                size: 64,
-                                color: Colors.grey,
-                              ),
-                              SizedBox(height: 16),
-                              Text(
-                                'No business cards yet',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey,
+                      ? RefreshIndicator(
+                          onRefresh: _loadBusinessCards,
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.6,
+                              child: const Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.credit_card,
+                                      size: 64,
+                                      color: Colors.grey,
+                                    ),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'No business cards yet',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'Tap "Scan New Card" to get started',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'Pull down to refresh',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Tap "Scan New Card" to get started',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _businessCards.length,
-                          itemBuilder: (context, index) {
-                            final card = _businessCards[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).primaryColor,
-                                  child: Text(
-                                    (card.name?.isNotEmpty == true)
-                                        ? card.name![0].toUpperCase()
-                                        : 'BC',
+                      : RefreshIndicator(
+                          onRefresh: _loadBusinessCards,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _businessCards.length,
+                            itemBuilder: (context, index) {
+                              final card = _businessCards[index];
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: Theme.of(
+                                      context,
+                                    ).primaryColor,
+                                    child: Text(
+                                      (card.name?.isNotEmpty == true)
+                                          ? card.name![0].toUpperCase()
+                                          : 'BC',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  title: Text(
+                                    card.name ?? 'Unknown',
                                     style: const TextStyle(
-                                      color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                ),
-                                title: Text(
-                                  card.name ?? 'Unknown',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (card.company != null)
-                                      Text(card.company!),
-                                    if (card.jobTitle != null)
-                                      Text(
-                                        card.jobTitle!,
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      if (card.company != null)
+                                        Text(card.company!),
+                                      if (card.jobTitle != null)
+                                        Text(
+                                          card.jobTitle!,
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                          ),
                                         ),
-                                      ),
-                                  ],
+                                    ],
+                                  ),
+                                  trailing: const Icon(Icons.arrow_forward_ios),
+                                  onTap: () => _navigateToDetail(card),
                                 ),
-                                trailing: const Icon(Icons.arrow_forward_ios),
-                                onTap: () => _navigateToDetail(card),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                 ),
               ],
