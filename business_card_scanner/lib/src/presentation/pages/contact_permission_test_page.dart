@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:get_it/get_it.dart';
 import '../../services/contact_service.dart';
 import '../../models/business_card.dart';
@@ -13,7 +12,7 @@ class ContactPermissionTestPage extends StatefulWidget {
 }
 
 class _ContactPermissionTestPageState extends State<ContactPermissionTestPage> {
-  PermissionStatus _permissionStatus = PermissionStatus.denied;
+  bool _hasPermission = false;
   bool _isLoading = false;
   String _statusMessage = 'Tap "Check Permission" to start';
 
@@ -25,10 +24,11 @@ class _ContactPermissionTestPageState extends State<ContactPermissionTestPage> {
 
   Future<void> _checkPermissionStatus() async {
     final contactService = GetIt.instance<ContactService>();
-    final status = await contactService.getPermissionStatus();
+    final hasPermission = await contactService.hasContactsPermission();
     setState(() {
-      _permissionStatus = status;
-      _statusMessage = contactService.getPermissionStatusDescription(status);
+      _hasPermission = hasPermission;
+      _statusMessage =
+          contactService.getPermissionStatusDescription(hasPermission);
     });
   }
 
@@ -39,22 +39,22 @@ class _ContactPermissionTestPageState extends State<ContactPermissionTestPage> {
     });
 
     final contactService = GetIt.instance<ContactService>();
-    final status = await contactService.requestContactsPermission();
+    final hasPermission = await contactService.requestContactsPermission();
 
     setState(() {
-      _permissionStatus = status;
+      _hasPermission = hasPermission;
       _isLoading = false;
-      _statusMessage = contactService.getPermissionStatusDescription(status);
+      _statusMessage =
+          contactService.getPermissionStatusDescription(hasPermission);
     });
 
-    if (status == PermissionStatus.permanentlyDenied) {
-      _showSettingsDialog();
+    if (!hasPermission) {
+      _showPermissionDeniedDialog();
     }
   }
 
   Future<void> _testContactAccess() async {
-    if (_permissionStatus != PermissionStatus.granted &&
-        _permissionStatus != PermissionStatus.limited) {
+    if (!_hasPermission) {
       setState(() {
         _statusMessage = 'Permission not granted. Cannot test contact access.';
       });
@@ -85,8 +85,7 @@ class _ContactPermissionTestPageState extends State<ContactPermissionTestPage> {
   }
 
   Future<void> _testAddContact() async {
-    if (_permissionStatus != PermissionStatus.granted &&
-        _permissionStatus != PermissionStatus.limited) {
+    if (!_hasPermission) {
       setState(() {
         _statusMessage = 'Permission not granted. Cannot add test contact.';
       });
@@ -131,26 +130,19 @@ class _ContactPermissionTestPageState extends State<ContactPermissionTestPage> {
     }
   }
 
-  void _showSettingsDialog() {
+  void _showPermissionDeniedDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Permission Required'),
           content: const Text(
-            'Contacts permission is permanently denied. Please enable it in Settings to save business cards to contacts.',
+            'Contacts permission is required to save business cards to contacts. Please grant permission in your device settings.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                openAppSettings();
-              },
-              child: const Text('Open Settings'),
+              child: const Text('OK'),
             ),
           ],
         );
@@ -159,19 +151,10 @@ class _ContactPermissionTestPageState extends State<ContactPermissionTestPage> {
   }
 
   Color _getStatusColor() {
-    switch (_permissionStatus) {
-      case PermissionStatus.granted:
-        return Colors.green;
-      case PermissionStatus.denied:
-        return Colors.orange;
-      case PermissionStatus.permanentlyDenied:
-        return Colors.red;
-      case PermissionStatus.restricted:
-        return Colors.red;
-      case PermissionStatus.limited:
-        return Colors.yellow;
-      case PermissionStatus.provisional:
-        return Colors.blue;
+    if (_hasPermission) {
+      return Colors.green;
+    } else {
+      return Colors.orange;
     }
   }
 
@@ -179,8 +162,9 @@ class _ContactPermissionTestPageState extends State<ContactPermissionTestPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Contact Permission Test'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -201,28 +185,35 @@ class _ContactPermissionTestPageState extends State<ContactPermissionTestPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor().withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: _getStatusColor()),
-                      ),
-                      child: Text(
-                        _permissionStatus.name.toUpperCase(),
-                        style: TextStyle(
+                    Row(
+                      children: [
+                        Icon(
+                          _hasPermission ? Icons.check_circle : Icons.warning,
                           color: _getStatusColor(),
-                          fontWeight: FontWeight.bold,
+                          size: 24,
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _statusMessage,
+                            style: TextStyle(
+                              color: _getStatusColor(),
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    Text(_statusMessage, style: const TextStyle(fontSize: 14)),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Test Actions',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
@@ -239,51 +230,42 @@ class _ContactPermissionTestPageState extends State<ContactPermissionTestPage> {
             ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
-              onPressed: (_isLoading ||
-                      (_permissionStatus != PermissionStatus.granted &&
-                          _permissionStatus != PermissionStatus.limited))
-                  ? null
-                  : _testContactAccess,
+              onPressed:
+                  (_isLoading || !_hasPermission) ? null : _testContactAccess,
               icon: const Icon(Icons.verified_user),
               label: const Text('Test Contact Access'),
             ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
-              onPressed: (_isLoading ||
-                      (_permissionStatus != PermissionStatus.granted &&
-                          _permissionStatus != PermissionStatus.limited))
-                  ? null
-                  : _testAddContact,
+              onPressed:
+                  (_isLoading || !_hasPermission) ? null : _testAddContact,
               icon: const Icon(Icons.person_add),
               label: const Text('Add Test Contact'),
             ),
             const SizedBox(height: 16),
             if (_isLoading) const Center(child: CircularProgressIndicator()),
-            const Expanded(
-              child: Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'How to use:',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+            const Spacer(),
+            Card(
+              color: Colors.blue.shade50,
+              child: const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'About This Test',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
-                      SizedBox(height: 8),
-                      Text(
-                        '1. Check permission status to see current state\n'
-                        '2. Request permission if needed\n'
-                        '3. Test contact access to verify functionality\n'
-                        '4. Add a test contact to verify saving works\n'
-                        '5. If permission is denied permanently, use Settings button',
-                        style: TextStyle(fontSize: 14),
-                      ),
-                    ],
-                  ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'This page helps you test contact permissions for the Business Card Scanner app. '
+                      'The app uses flutter_contacts for better iOS and Android compatibility.',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ],
                 ),
               ),
             ),
