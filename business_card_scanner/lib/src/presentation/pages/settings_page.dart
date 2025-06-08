@@ -88,27 +88,57 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showAboutDialog() {
-    showAboutDialog(
+    showDialog(
       context: context,
-      applicationName: 'Business Card Scanner',
-      applicationVersion: '1.0.0',
-      applicationIcon: const Icon(
-        Icons.credit_card,
-        size: 48,
-        color: Colors.blue,
-      ),
-      children: [
-        const Text(
-          'A Flutter app for scanning and managing business cards using OCR technology.',
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(
+              Icons.credit_card,
+              size: 32,
+              color: Colors.blue,
+            ),
+            const SizedBox(width: 12),
+            const Text('About'),
+          ],
         ),
-        const SizedBox(height: 16),
-        const Text('Features:'),
-        const Text('• OCR text recognition'),
-        const Text('• Contact integration'),
-        const Text('• Export to CSV/vCard'),
-        const Text('• Image cropping'),
-        const Text('• Search functionality'),
-      ],
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Business Card Scanner',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Text('Version 1.0.0'),
+              const SizedBox(height: 16),
+              const Text(
+                'A Flutter app for scanning and managing business cards using OCR technology.',
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Features:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const Text('• OCR text recognition'),
+              const Text('• Contact integration'),
+              const Text('• Export to CSV/vCard'),
+              const Text('• Image cropping'),
+              const Text('• Search functionality'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -164,26 +194,26 @@ class _SettingsPageState extends State<SettingsPage> {
                 const Divider(),
 
                 // Export Section
-                const ListTile(
-                  title: Text(
-                    'Export',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                    ),
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.folder),
-                  title: const Text('Export Directory'),
-                  subtitle: Text(
-                    _exportDirectory,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
+                // const ListTile(
+                //   title: Text(
+                //     'Export',
+                //     style: TextStyle(
+                //       fontSize: 18,
+                //       fontWeight: FontWeight.bold,
+                //       color: Colors.blue,
+                //     ),
+                //   ),
+                // ),
+                // ListTile(
+                //   leading: const Icon(Icons.folder),
+                //   title: const Text('Export Directory'),
+                //   subtitle: Text(
+                //     _exportDirectory,
+                //     style: const TextStyle(fontSize: 12),
+                //   ),
+                // ),
 
-                const Divider(),
+                // const Divider(),
 
                 // Permissions Section
                 const ListTile(

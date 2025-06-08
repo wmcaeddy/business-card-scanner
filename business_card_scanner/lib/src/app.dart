@@ -35,6 +35,7 @@ class AppView extends StatelessWidget {
       return MaterialApp(
         title: 'Business Card Scanner',
         locale: state.locale,
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF3F37C9)),
           useMaterial3: true,

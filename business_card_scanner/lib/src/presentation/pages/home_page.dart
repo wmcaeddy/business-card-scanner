@@ -7,6 +7,9 @@ import '../widgets/app_drawer.dart';
 import '../widgets/bcs_container.dart';
 import 'camera_page.dart';
 import 'business_card_detail_page.dart';
+import 'business_card_list_page.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -41,7 +44,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _navigateToCamera() async {
+  Future<void> _navigateToCamera() async {
     final result = await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (context) => const CameraPage()));
@@ -49,6 +52,92 @@ class _HomePageState extends State<HomePage> {
     if (result == true) {
       _loadBusinessCards(); // Refresh the list
     }
+  }
+
+  Future<void> _captureImage() async {
+    final ImagePicker imagePicker = ImagePicker();
+
+    try {
+      final XFile? image = await imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        await _cropAndNavigate(image.path);
+      }
+    } catch (e) {
+      _showErrorDialog('Failed to capture image: $e');
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    final ImagePicker imagePicker = ImagePicker();
+
+    try {
+      final XFile? image = await imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        await _cropAndNavigate(image.path);
+      }
+    } catch (e) {
+      _showErrorDialog('Failed to pick image: $e');
+    }
+  }
+
+  Future<void> _cropAndNavigate(String imagePath) async {
+    try {
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: imagePath,
+        compressFormat: ImageCompressFormat.jpg,
+        compressQuality: 90,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Business Card',
+            toolbarColor: Theme.of(context).primaryColor,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.ratio3x2,
+            lockAspectRatio: false,
+          ),
+          IOSUiSettings(
+            title: 'Crop Business Card',
+            doneButtonTitle: 'Done',
+            cancelButtonTitle: 'Cancel',
+          ),
+        ],
+      );
+
+      if (croppedFile != null) {
+        _navigateToDetailWithImage(croppedFile.path);
+      }
+    } catch (e) {
+      _showErrorDialog('Failed to crop image: $e');
+      // If cropping fails, use original image
+      _navigateToDetailWithImage(imagePath);
+    }
+  }
+
+  void _navigateToDetailWithImage(String imagePath) async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => BusinessCardDetailPage(imagePath: imagePath),
+      ),
+    );
+
+    if (result == true) {
+      _loadBusinessCards(); // Refresh the list
+    }
+  }
+
+  void _navigateToSavedCards() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const BusinessCardListPage(),
+      ),
+    );
   }
 
   void _navigateToDetail(BusinessCard card) {
@@ -86,15 +175,11 @@ class _HomePageState extends State<HomePage> {
         leadingWidth: 88,
         leading: Padding(
           padding: const EdgeInsets.only(left: 16),
-          child: BcsContainer(
-            height: 48,
+          child: Image.asset(
+            'assets/bcardv1.png',
             width: 48,
-            borderRadius: BorderRadius.circular(50),
-            child: const Icon(
-              size: 48,
-              Icons.account_circle_rounded,
-              color: Colors.white,
-            ),
+            height: 48,
+            fit: BoxFit.contain,
           ),
         ),
         backgroundColor: Colors.white,
@@ -118,14 +203,14 @@ class _HomePageState extends State<HomePage> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // Header with scan button
+                // Header with action buttons
                 Container(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
                       const SizedBox(height: 20),
                       const Text(
-                        'Scan Business Cards',
+                        'Business Card Scanner',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -138,133 +223,75 @@ class _HomePageState extends State<HomePage> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: _navigateToCamera,
-                        icon: const Icon(Icons.camera_alt),
-                        label: const Text('Scan New Card'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 16,
+
+                      // Three row action buttons
+                      Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _captureImage,
+                              icon: const Icon(Icons.camera_alt),
+                              label: const Text('Take Photo'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 16,
+                                ),
+                                backgroundColor: Theme.of(context).primaryColor,
+                                foregroundColor: Colors.white,
+                                textStyle: const TextStyle(fontSize: 16),
+                              ),
+                            ),
                           ),
-                          backgroundColor: Theme.of(context).primaryColor,
-                          foregroundColor: Colors.white,
-                          textStyle: const TextStyle(fontSize: 16),
-                        ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _pickFromGallery,
+                              icon: const Icon(Icons.photo_library),
+                              label: const Text('From Gallery'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 16,
+                                ),
+                                backgroundColor: Theme.of(context).primaryColor,
+                                foregroundColor: Colors.white,
+                                textStyle: const TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _navigateToSavedCards,
+                              icon: const Icon(Icons.folder),
+                              label: const Text('Saved Business Cards'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 16,
+                                ),
+                                backgroundColor: Theme.of(context).primaryColor,
+                                foregroundColor: Colors.white,
+                                textStyle: const TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
 
-                // Business cards list
-                Expanded(
-                  child: _businessCards.isEmpty
-                      ? RefreshIndicator(
-                          onRefresh: _loadBusinessCards,
-                          child: SingleChildScrollView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            child: SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.6,
-                              child: const Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.credit_card,
-                                      size: 64,
-                                      color: Colors.grey,
-                                    ),
-                                    SizedBox(height: 16),
-                                    Text(
-                                      'No business cards yet',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    SizedBox(height: 8),
-                                    Text(
-                                      'Tap "Scan New Card" to get started',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    SizedBox(height: 16),
-                                    Text(
-                                      'Pull down to refresh',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _loadBusinessCards,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _businessCards.length,
-                            itemBuilder: (context, index) {
-                              final card = _businessCards[index];
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: Theme.of(
-                                      context,
-                                    ).primaryColor,
-                                    child: Text(
-                                      (card.name?.isNotEmpty == true)
-                                          ? card.name![0].toUpperCase()
-                                          : 'BC',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  title: Text(
-                                    card.name ?? 'Unknown',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  subtitle: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      if (card.company != null)
-                                        Text(card.company!),
-                                      if (card.jobTitle != null)
-                                        Text(
-                                          card.jobTitle!,
-                                          style: TextStyle(
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  trailing: const Icon(Icons.arrow_forward_ios),
-                                  onTap: () => _navigateToDetail(card),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
+                // Empty space
+                const Expanded(
+                  child: SizedBox(),
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToCamera,
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.camera_alt),
-      ),
     );
   }
 }
