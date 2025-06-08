@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../models/business_card.dart';
 import '../../services/ocr_service.dart';
 import '../../services/database_service.dart';
@@ -107,7 +108,9 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 8),
-                Expanded(child: Text('Business card processed! Tap to adjust field mapping.')),
+                Expanded(
+                    child: Text(
+                        'Business card processed! Tap to adjust field mapping.')),
               ],
             ),
             backgroundColor: Colors.green,
@@ -133,7 +136,7 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
     try {
       final ocrService = GetIt.instance<OCRService>();
       final textLines = await ocrService.extractTextLines(widget.imagePath);
-      
+
       if (textLines.isEmpty) {
         _showErrorDialog('No text found in the image for mapping.');
         return;
@@ -153,7 +156,7 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
           _businessCard = result;
         });
         _populateFields();
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -254,18 +257,19 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
 
     try {
       final contactService = GetIt.instance<ContactService>();
-      
-      // First test contacts access
-      final canAccess = await contactService.testContactsAccess();
-      if (!canAccess) {
+
+      // Check permission status first
+      final permissionStatus = await contactService.getPermissionStatus();
+
+      if (permissionStatus == PermissionStatus.permanentlyDenied) {
         setState(() {
           _isAddingToContacts = false;
         });
-        _showContactsPermissionDialog();
+        _showContactsPermissionDialog(isPermanentlyDenied: true);
         return;
       }
 
-      // Add to contacts
+      // Add to contacts (this will handle permission request internally)
       await contactService.addToContacts(_businessCard!);
 
       setState(() {
@@ -291,24 +295,28 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
       setState(() {
         _isAddingToContacts = false;
       });
-      
-      // Show more specific error handling
-      if (e.toString().contains('permission')) {
-        _showContactsPermissionDialog();
+
+      // Show more specific error handling based on the error message
+      final errorMessage = e.toString();
+      if (errorMessage.contains('permanently denied')) {
+        _showContactsPermissionDialog(isPermanentlyDenied: true);
+      } else if (errorMessage.contains('permission')) {
+        _showContactsPermissionDialog(isPermanentlyDenied: false);
       } else {
         _showErrorDialog('Failed to add to contacts: $e');
       }
     }
   }
 
-  void _showContactsPermissionDialog() {
+  void _showContactsPermissionDialog({bool isPermanentlyDenied = false}) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Contacts Permission Required'),
-        content: const Text(
-          'This app needs permission to access your contacts to save business card information. '
-          'Please grant contacts permission in Settings.',
+        content: Text(
+          isPermanentlyDenied
+              ? 'Contacts permission is permanently denied. Please enable it in Settings to save business card information to your contacts.'
+              : 'This app needs permission to access your contacts to save business card information. Please grant contacts permission.',
         ),
         actions: [
           TextButton(
@@ -318,10 +326,15 @@ class _BusinessCardDetailPageState extends State<BusinessCardDetailPage> {
           TextButton(
             onPressed: () async {
               Navigator.of(context).pop();
-              final contactService = GetIt.instance<ContactService>();
-              await contactService.requestContactsPermission();
+              if (isPermanentlyDenied) {
+                await openAppSettings();
+              } else {
+                final contactService = GetIt.instance<ContactService>();
+                await contactService.requestContactsPermission();
+              }
             },
-            child: const Text('Open Settings'),
+            child: Text(
+                isPermanentlyDenied ? 'Open Settings' : 'Grant Permission'),
           ),
         ],
       ),

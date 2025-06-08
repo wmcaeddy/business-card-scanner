@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import '../../services/database_service.dart';
 import '../../services/export_service.dart';
+import 'contact_permission_test_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -180,6 +181,32 @@ class _SettingsPageState extends State<SettingsPage> {
                     _exportDirectory,
                     style: const TextStyle(fontSize: 12),
                   ),
+                ),
+
+                const Divider(),
+
+                // Permissions Section
+                const ListTile(
+                  title: Text(
+                    'Permissions',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.contact_phone),
+                  title: const Text('Contact Permission Test'),
+                  subtitle: const Text('Test and manage contacts permission'),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const ContactPermissionTestPage(),
+                      ),
+                    );
+                  },
                 ),
 
                 const Divider(),
