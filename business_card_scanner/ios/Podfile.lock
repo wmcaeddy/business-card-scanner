@@ -1,9 +1,9 @@
 PODS:
   - camera_avfoundation (0.0.1):
     - Flutter
-  - contacts_service (0.2.2):
-    - Flutter
   - Flutter (1.0.0)
+  - flutter_contacts (0.0.1):
+    - Flutter
   - flutter_secure_storage (6.0.0):
     - Flutter
   - google_mlkit_commons (0.11.0):
@@ -87,8 +87,8 @@ PODS:
 
 DEPENDENCIES:
   - camera_avfoundation (from `.symlinks/plugins/camera_avfoundation/ios`)
-  - contacts_service (from `.symlinks/plugins/contacts_service/ios`)
   - Flutter (from `Flutter`)
+  - flutter_contacts (from `.symlinks/plugins/flutter_contacts/ios`)
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
   - google_mlkit_commons (from `.symlinks/plugins/google_mlkit_commons/ios`)
   - google_mlkit_text_recognition (from `.symlinks/plugins/google_mlkit_text_recognition/ios`)
@@ -119,10 +119,10 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   camera_avfoundation:
     :path: ".symlinks/plugins/camera_avfoundation/ios"
-  contacts_service:
-    :path: ".symlinks/plugins/contacts_service/ios"
   Flutter:
     :path: Flutter
+  flutter_contacts:
+    :path: ".symlinks/plugins/flutter_contacts/ios"
   flutter_secure_storage:
     :path: ".symlinks/plugins/flutter_secure_storage/ios"
   google_mlkit_commons:
@@ -142,8 +142,8 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   camera_avfoundation: be3be85408cd4126f250386828e9b1dfa40ab436
-  contacts_service: 7c2ed10147f55891576c6a582f431e385d8de92d
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
+  flutter_contacts: 5383945387e7ca37cf963d4be57c21f2fc15ca9f
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
   google_mlkit_commons: 2abe6a70e1824e431d16a51085cb475b672c8aab
   google_mlkit_text_recognition: ec2122ec89bfe0d7200763336a6e4ef44810674c

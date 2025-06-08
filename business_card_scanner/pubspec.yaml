@@ -37,6 +37,9 @@ dependencies:
   # Contact Management
   flutter_contacts: ^1.1.9+2
   
+  # Permissions
+  permission_handler: ^11.3.1
+  
   # UI and Utilities
   flutter_bloc: ^8.1.5
   equatable: ^2.0.5
