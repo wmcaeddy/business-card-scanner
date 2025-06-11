@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get_it/get_it.dart';
+import 'package:uuid/uuid.dart';
 import '../../models/business_card.dart';
+import '../../services/database_service.dart';
+import '../../services/contact_service.dart';
 
 class TextMappingPage extends StatefulWidget {
   final List<String> extractedTexts;
@@ -153,7 +157,7 @@ class _TextMappingPageState extends State<TextMappingPage> {
   BusinessCard _createBusinessCard() {
     final now = DateTime.now();
     return BusinessCard(
-      id: widget.initialCard?.id ?? now.millisecondsSinceEpoch.toString(),
+      id: widget.initialCard?.id ?? const Uuid().v4(),
       name: fieldValues['name'],
       company: fieldValues['company'],
       jobTitle: fieldValues['jobTitle'],
@@ -167,24 +171,109 @@ class _TextMappingPageState extends State<TextMappingPage> {
     );
   }
 
-  void _saveBusinessCard() {
-    Navigator.of(context).pop(_createBusinessCard());
+  Future<void> _saveBusinessCard() async {
+    try {
+      final businessCard = _createBusinessCard();
+      final databaseService = GetIt.instance<DatabaseService>();
+      await databaseService.insertBusinessCard(businessCard);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.save, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Business card saved successfully!'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save business card: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
-  void _saveToContact() {
-    // TODO: Implement save to contact functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('Save to Contact functionality will be implemented')),
-    );
+  Future<void> _saveToContact() async {
+    try {
+      final businessCard = _createBusinessCard();
+      final contactService = GetIt.instance<ContactService>();
+      await contactService.addToContacts(businessCard);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.person_add, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Added to contacts successfully!'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to add to contacts: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
-  void _saveBothBusinessCardAndContact() {
-    // TODO: Implement save both functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('Save Both functionality will be implemented')),
-    );
+  Future<void> _saveBothBusinessCardAndContact() async {
+    try {
+      final businessCard = _createBusinessCard();
+
+      // Save to database first
+      final databaseService = GetIt.instance<DatabaseService>();
+      await databaseService.insertBusinessCard(businessCard);
+
+      // Then add to contacts
+      final contactService = GetIt.instance<ContactService>();
+      await contactService.addToContacts(businessCard);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Saved to business cards and contacts!'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -534,16 +623,31 @@ class _TextMappingPageState extends State<TextMappingPage> {
             child: Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _saveToContact,
-                    icon: const Icon(Icons.contact_page),
-                    label: const Text('Save to Contact'),
-                    style: OutlinedButton.styleFrom(
+                  child: ElevatedButton.icon(
+                    onPressed: _saveBusinessCard,
+                    icon: const Icon(Icons.credit_card),
+                    label: const Text('Save Card'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _saveToContact,
+                    icon: const Icon(Icons.contact_page),
+                    label: const Text('Save Contact'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _saveBothBusinessCardAndContact,

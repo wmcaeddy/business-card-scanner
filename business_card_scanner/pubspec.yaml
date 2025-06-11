@@ -1,5 +1,5 @@
 name: business_card_scanner
-description: "Business card scanner mobile app made with Flutter."
+description: "BizScan - Business card scanner mobile app made with Flutter."
 publish_to: 'none' 
 version: 1.0.0+1
 

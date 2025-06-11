@@ -108,7 +108,7 @@ class _SettingsPageState extends State<SettingsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'Business Card Scanner',
+                'BizScan',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -284,7 +284,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 // Footer
                 const Center(
                   child: Text(
-                    'Business Card Scanner v1.0.0',
+                    'BizScan v1.0.0',
                     style: TextStyle(
                       color: Colors.grey,
                       fontSize: 12,

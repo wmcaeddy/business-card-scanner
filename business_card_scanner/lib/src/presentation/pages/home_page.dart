@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import '../../models/business_card.dart';
 import '../../services/database_service.dart';
+import '../../services/ocr_service.dart';
 import 'settings_page.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/bcs_container.dart';
 import 'camera_page.dart';
 import 'business_card_detail_page.dart';
 import 'business_card_list_page.dart';
+import 'text_mapping_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 
@@ -121,14 +123,60 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _navigateToDetailWithImage(String imagePath) async {
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => BusinessCardDetailPage(imagePath: imagePath),
-      ),
-    );
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Processing image...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
 
-    if (result == true) {
-      _loadBusinessCards(); // Refresh the list
+      // Extract text from image
+      final ocrService = GetIt.instance<OCRService>();
+      final textLines = await ocrService.extractTextLines(imagePath);
+      final extractedCard = await ocrService.processBusinessCard(imagePath);
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      if (textLines.isEmpty) {
+        _showErrorDialog('No text found in the image for mapping.');
+        return;
+      }
+
+      // Navigate directly to mapping page
+      final result = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => TextMappingPage(
+            extractedTexts: textLines,
+            initialCard: extractedCard.copyWith(imagePath: imagePath),
+          ),
+        ),
+      );
+
+      if (result == true) {
+        _loadBusinessCards(); // Refresh the list
+      }
+    } catch (e) {
+      // Close loading dialog if it's still open
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showErrorDialog('Failed to process image: $e');
     }
   }
 
@@ -183,7 +231,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         backgroundColor: Colors.white,
-        title: const Text('Business Card Scanner'),
+        title: const Text('BizScan'),
         actions: [
           IconButton(
             onPressed: () {
@@ -210,7 +258,7 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       const SizedBox(height: 20),
                       const Text(
-                        'Business Card Scanner',
+                        'BizScan',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,

@@ -19,7 +19,7 @@ class _SplashScreenState extends State<SplashScreen> {
   void _navigateToHome() async {
     if (widget.duration == Duration.zero) return;
     await Future.delayed(widget.duration);
-    
+
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
@@ -47,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 'assets/logo.svg',
                 width: MediaQuery.of(context).size.width * 0.5,
               ),
-              const Text('Business Card Scanner'),
+              const Text('BizScan'),
             ],
           ),
         ),

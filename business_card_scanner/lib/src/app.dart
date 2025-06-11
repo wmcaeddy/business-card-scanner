@@ -33,7 +33,7 @@ class AppView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<LocaleCubit, LocaleState>(builder: (context, state) {
       return MaterialApp(
-        title: 'Business Card Scanner',
+        title: 'BizScan',
         locale: state.locale,
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
